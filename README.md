@@ -209,3 +209,76 @@ handle_call({order, Name, Color, Description}, From, Cats) ->
             my_server:reply(From, Cat),
             Rest
     end;
+```
+Możesz to opisać tak:
+
+Kiedy przychodzi zamówienie `{order, ...}`:
+
+jeśli Cats jest puste — tworzymy nowego kota i odsyłamy go klientowi,
+
+jeśli na liście jest jakiś kot — oddajemy pierwszego.
+
+W obu przypadkach zwracamy nowy stan i wysyłamy odpowiedź przez `reply/2`.
+
+Druga klauzula:
+```erl
+handle_call(terminate, From, Cats) ->
+    my_server:reply(From, ok),
+    terminate(Cats).
+```
+Wyjaśnienie:
+
+Jeśli klient wysyła `terminate`:
+
+odpowiadamy `ok`,
+
+wołamy `terminate/1`, które wypisuje koty i kończy proces.
+
+handle_cast/2 – obsługa asynchronicznych wiadomości
+```erl
+handle_cast({return, Cat = #cat{}}, Cats) ->
+    [Cat | Cats].
+```
+Wyjaśnienie:
+
+Asynchroniczny komunikat `{return, Cat}` — dodajemy kota na początek listy i to wszystko.
+Nie wysyłamy żadnej odpowiedzi, bo cast jej nie oczekuje.
+
+Funkcje prywatne
+
+`make_cat/3` – tworzy rekord kota.
+
+`terminate/1` – wypisuje wszystkich kotów i kończy proces exit(normal).
+
+**Jedno zdanie podsumowania dla slajdu**
+
+`my_server` jest naszą małą, generyczną biblioteką do budowy serwerów, a `kitty_server2` to konkretna logika „sklepu z kotami”.
+To czysty podział: inżynieria serwerowa vs. logika domeny.
+
+## Krok 4 – prawdziwy OTP gen_server + supervisor
+
+W tym kroku pokazujemy, jak wygląda standardowa implementacja **OTP**:
+
+`gen_server` – moduł, który formalizuje wszystkie callbacki,
+
+`supervisor` – proces, który pilnuje serwera i restartuje go, jeśli padnie.
+
+To dokładnie ta architektura, którą ma każda aplikacja napisana „po erlangowemu”.
+
+Jak tłumaczyć na prezentacji
+
+Tutaj przenosimy nasz serwer do OTP.
+`kitty_gen_server` implementuje oficjalny behaviour gen_server.
+Znika z niego cała infrastruktura, bo robi ją OTP: pętla receive, monitory, call/cast, terminowanie, code_change, wszystko.
+
+Drugi element to `supervisor`, który uruchamia serwer i automatycznie go restartuje, jeśli padnie.
+
+## Podsumowanie
+
+`kitty_server` — ręczny serwer, dużo powtarzalnego kodu.
+
+`my_server` — nasz mini-framework, który wyciąga infrastrukturę serwera.
+
+`kitty_server2` — czysty serwer domenowy, korzystający z `my_server`.
+
+`kitty_gen_server` + `kitty_sup` — prawdziwy OTP, produkcyjna architektura.
